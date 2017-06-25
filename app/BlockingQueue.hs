@@ -18,4 +18,4 @@ executeTask :: forall s a . (Addressable s, Serializable a)
             => s
             -> Closure (Process a)
             -> Process (Either String a)
-executeTask = undefined
+executeTask = call
