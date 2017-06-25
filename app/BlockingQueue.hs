@@ -29,3 +29,15 @@ data BlockingQueue a = BlockingQueue {
   active :: [(MonitorRef, CallRef (Either ExitReason a), Async a)] ,
   accepted :: Seq (CallRef (Either ExitReason a), Closure (Process a))
   }
+
+enqueue :: Seq a -> a -> Seq a
+enqueue s a = a <| s
+
+dequeue :: Seq a -> Maybe (a, Seq a)
+dequeue s = maybe Nothing (\(s' :> a) -> Just (a, s')) $ getR s
+
+getR :: Seq a -> Maybe (ViewR a)
+getR s =
+  case (viewr s) of
+    EmptyR -> Nothing
+    a      -> Just a
