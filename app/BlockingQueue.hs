@@ -9,12 +9,13 @@ import Control.Distributed.Process.Async
 import Control.Distributed.Process hiding (call)
 import Control.Distributed.Process.Closure
 import Control.Distributed.Process.Node
-import Control.Distributed.Process.ManagedProcess
+import Control.Distributed.Process.ManagedProcess hiding (enqueue)
 import Control.Distributed.Process.Extras.Time
 import Control.Distributed.Process.Serializable
 import Control.Distributed.Process.Extras.Internal.Types
 import Network.Transport.TCP (createTransport, defaultTCPParameters)
-import Data.Sequence
+import Data.Sequence hiding (length)
+--import Prelude hiding (length)
 
 executeTask :: forall s a . (Addressable s, Serializable a)
             => s
@@ -47,4 +48,21 @@ acceptTask :: Serializable a
            -> CallRef (Either ExitReason a)
            -> Closure (Process a)
            -> Process (BlockingQueue a)
-acceptTask = undefined
+acceptTask s@(BlockingQueue sz' runQueue taskQueue) from task' =
+  let currentSz = length runQueue
+  in case currentSz >= sz' of
+       True -> do
+         return $ s {accepted = enqueue taskQueue (from,task')}
+       False -> do
+         proc <- unClosure task'
+         asyncHandle <- (async . task) proc
+         ref <- monitorAsync asyncHandle
+         let taskEntry = (ref, from, asyncHandle)
+         return s { active = (taskEntry:runQueue) }
+
+storeTask :: Serializable a
+          => BlockingQueue a
+          -> CallRef (Either ExitReason a)
+          -> Closure (Process a)
+          -> Process (ProcessReply (Either ExitReason a) (BlockingQueue a))
+storeTask s r c = acceptTask s r c >>= noReply_ --because we are deferring our reply
