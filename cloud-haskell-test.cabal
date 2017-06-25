@@ -17,7 +17,9 @@ library
   hs-source-dirs:      src
   exposed-modules:     Lib
   build-depends:       base >= 4.7 && < 5,
-                       binary >= 0.8.3.0
+                       binary >= 0.8.3.0,
+                       containers >= 0.5.7.1,
+                       distributed-process-async >= 0.2.4
   default-language:    Haskell2010
 
 executable cloud-haskell-test-exe
@@ -27,7 +29,9 @@ executable cloud-haskell-test-exe
   build-depends:       base
                      , binary >= 0.8.3.0
                      , cloud-haskell-test
+                     , containers >= 0.5.7.1
                      , distributed-process
+                     , distributed-process-async >= 0.2.4
                      , distributed-process-client-server
                      , distributed-process-extras
                      , network-transport-tcp
@@ -40,6 +44,8 @@ test-suite cloud-haskell-test-test
   build-depends:       base
                      , binary >= 0.8.3.0
                      , cloud-haskell-test
+                     , containers >= 0.5.7.1
+                     , distributed-process-async >= 0.2.4
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 
