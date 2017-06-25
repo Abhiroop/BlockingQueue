@@ -41,3 +41,10 @@ getR s =
   case (viewr s) of
     EmptyR -> Nothing
     a      -> Just a
+
+acceptTask :: Serializable a
+           => BlockingQueue a
+           -> CallRef (Either ExitReason a)
+           -> Closure (Process a)
+           -> Process (BlockingQueue a)
+acceptTask = undefined
