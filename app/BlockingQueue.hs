@@ -118,3 +118,21 @@ taskComplete s@(BlockingQueue _ runQ _)
       in case accQ of
            Nothing            -> return st { active = runQ2 }
            Just ((tr,tc), ts) -> acceptTask (st { accepted = ts, active = runQ2 }) tr tc
+
+run :: forall a . (Serializable a)
+         => Process (InitResult (BlockingQueue a))
+         -> Process ()
+run init' = serve () (\() -> init') poolServer
+  where poolServer =
+          defaultProcess {
+              apiHandlers = [
+                 handleCallFrom (\s f (p :: Closure (Process a)) -> storeTask f s p)
+                 -- handleCallFrom :: forall s a b. (Serializable a, Serializable b) => (s -> CallRef b -> a -> Process (ProcessReply b s)) -> Dispatcher s
+               ]
+            , infoHandlers = [ handleInfo taskComplete ]
+            } :: ProcessDefinition (BlockingQueue a)
+
+-- pool :: forall a . Serializable a
+--      => SizeLimit
+--      -> Process (InitResult (BlockingQueue a))
+-- pool sz' = return $ InitOk (BlockingQueue sz' [] empty) Infinity
