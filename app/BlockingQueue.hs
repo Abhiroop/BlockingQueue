@@ -66,3 +66,12 @@ storeTask :: Serializable a
           -> Closure (Process a)
           -> Process (ProcessReply (Either ExitReason a) (BlockingQueue a))
 storeTask s r c = acceptTask s r c >>= noReply_ --because we are deferring our reply
+
+{-
+1. find the async handle for our monitor ref
+2. obtain the result using the handle
+3. send the result to the client
+4. bump another task from the backlog (if there is one)
+-}
+
+
