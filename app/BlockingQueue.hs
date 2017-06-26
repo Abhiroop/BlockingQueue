@@ -1,5 +1,8 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ExistentialQuantification #-}
 module BlockingQueue where
 
 import Data.Typeable
@@ -10,7 +13,7 @@ import Control.Distributed.Process.Async
 import Control.Distributed.Process hiding (call)
 import Control.Distributed.Process.Closure
 import Control.Distributed.Process.Node
-import Control.Distributed.Process.ManagedProcess hiding (enqueue)
+import Control.Distributed.Process.ManagedProcess hiding (enqueue, dequeue)
 import Control.Distributed.Process.Extras.Time
 import Control.Distributed.Process.Serializable
 import Control.Distributed.Process.Extras.Internal.Types
@@ -30,7 +33,7 @@ data BlockingQueue a = BlockingQueue {
   poolSize :: SizeLimit ,
   active :: [(MonitorRef, CallRef (Either ExitReason a), Async a)] ,
   accepted :: Seq (CallRef (Either ExitReason a), Closure (Process a))
-  }
+  } deriving (Typeable)
 
 enqueue :: Seq a -> a -> Seq a
 enqueue s a = a <| s
@@ -85,10 +88,33 @@ deleteFromRunQueue :: (MonitorRef, CallRef (Either ExitReason a), Async a)
                    -> [(MonitorRef, CallRef (Either ExitReason a), Async a)]
 deleteFromRunQueue c@(p, _, _) runQ = deleteBy (\_ (b, _, _) -> b == p) c runQ
 
+
 taskComplete :: forall a . Serializable a
              => BlockingQueue a
              -> ProcessMonitorNotification
              -> Process (ProcessAction (BlockingQueue a))
-taskComplete = undefined
+taskComplete s@(BlockingQueue _ runQ _)
+             (ProcessMonitorNotification ref _ _) =
+  let worker = findWorker ref runQ in
+  case worker of
+    Just t@(_, c, h) -> wait h >>= respond c >> bump s t >>= continue
+    Nothing          -> continue s
 
+  where
+    respond :: CallRef (Either ExitReason a)
+            -> AsyncResult a
+            -> Process ()
+    respond c (AsyncDone       r) = replyTo c ((Right r) :: (Either ExitReason a))
+    respond c (AsyncFailed     d) = replyTo c ((Left (ExitOther $ show d))  :: (Either ExitReason a))
+    respond c (AsyncLinkFailed d) = replyTo c ((Left (ExitOther $ show d))  :: (Either ExitReason a))
+    respond _      _              = die $ ExitOther "IllegalState"
 
+    bump :: BlockingQueue a
+         -> (MonitorRef, CallRef (Either ExitReason a), Async a)
+         -> Process (BlockingQueue a)
+    bump st@(BlockingQueue _ runQueue acc) worker =
+      let runQ2 = deleteFromRunQueue worker runQueue
+          accQ  = dequeue acc
+      in case accQ of
+           Nothing            -> return st { active = runQ2 }
+           Just ((tr,tc), ts) -> acceptTask (st { accepted = ts, active = runQ2 }) tr tc
