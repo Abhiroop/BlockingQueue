@@ -132,7 +132,7 @@ run init' = serve () (\() -> init') poolServer
             , infoHandlers = [ handleInfo taskComplete ]
             } :: ProcessDefinition (BlockingQueue a)
 
--- pool :: forall a . Serializable a
---      => SizeLimit
---      -> Process (InitResult (BlockingQueue a))
--- pool sz' = return $ InitOk (BlockingQueue sz' [] empty) Infinity
+pool :: forall a . Serializable a
+     => SizeLimit
+     -> Process (InitResult (BlockingQueue a))
+pool sz' = return $ InitOk (BlockingQueue sz' [] empty) Infinity
