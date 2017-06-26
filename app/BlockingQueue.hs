@@ -5,6 +5,7 @@ module BlockingQueue where
 import Data.Typeable
 import GHC.Generics
 import Data.Binary
+import Data.List
 import Control.Distributed.Process.Async
 import Control.Distributed.Process hiding (call)
 import Control.Distributed.Process.Closure
@@ -73,5 +74,18 @@ storeTask s r c = acceptTask s r c >>= noReply_ --because we are deferring our r
 3. send the result to the client
 4. bump another task from the backlog (if there is one)
 -}
+
+findWorker :: MonitorRef
+           -> [(MonitorRef, CallRef (Either ExitReason a), Async a)]
+           -> Maybe (MonitorRef, CallRef (Either ExitReason a), Async a)
+findWorker key = find (\(ref,_,_) -> ref == key)
+
+
+
+taskComplete :: forall a . Serializable a
+             => BlockingQueue a
+             -> ProcessMonitorNotification
+             -> Process (ProcessAction (BlockingQueue a))
+taskComplete = undefined
 
 
