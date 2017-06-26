@@ -80,7 +80,10 @@ findWorker :: MonitorRef
            -> Maybe (MonitorRef, CallRef (Either ExitReason a), Async a)
 findWorker key = find (\(ref,_,_) -> ref == key)
 
-
+deleteFromRunQueue :: (MonitorRef, CallRef (Either ExitReason a), Async a)
+                   -> [(MonitorRef, CallRef (Either ExitReason a), Async a)]
+                   -> [(MonitorRef, CallRef (Either ExitReason a), Async a)]
+deleteFromRunQueue c@(p, _, _) runQ = deleteBy (\_ (b, _, _) -> b == p) c runQ
 
 taskComplete :: forall a . Serializable a
              => BlockingQueue a
